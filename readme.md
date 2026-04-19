@@ -5,8 +5,7 @@ A powerful, multi-turn Streamlit UI designed for testing, comparing, and pushing
 ## ✨ Features
 
 * **Universal Model Support:** Easily switch between local models (via vLLM/Ollama) and commercial APIs (OpenAI, Gemini) using a centralized config.py. Fully supports modern reasoning models (e.g., Qwen 3.5/3.6, OpenAI o-series).
-* **🧠 Advanced Reasoning (Chain-of-Thought):** * Extracts and displays the hidden "thinking" process of reasoning models inside a collapsible UI widget.
-  * **Reasoning Memory:** Automatically injects previous thoughts back into the conversation history using `<think>` tags, ensuring the model remembers its logical steps across multiple turns.
+* **🧠 Advanced Reasoning (Chain-of-Thought):** Extracts and displays the hidden "thinking" process of reasoning models inside a collapsible UI widget.
 * **Rich Media Handling:**
   * **Images:** Upload or paste screenshots directly. Preserves multi-line text and prompt formatting perfectly in the chat history.
   * **Video:** Native video parsing and frame sampling support.
