@@ -4,15 +4,17 @@ A powerful, multi-turn Streamlit UI designed for testing, comparing, and pushing
 
 ## ✨ Features
 
-* **Universal Model Support:** Easily switch between local models (via vLLM/Ollama) and commercial APIs (OpenAI, Gemini) using a centralized config.py.
+* **Universal Model Support:** Easily switch between local models (via vLLM/Ollama) and commercial APIs (OpenAI, Gemini) using a centralized config.py. Fully supports modern reasoning models (e.g., Qwen 3.5/3.6, OpenAI o-series).
+* **🧠 Advanced Reasoning (Chain-of-Thought):** * Extracts and displays the hidden "thinking" process of reasoning models inside a collapsible UI widget.
+  * **Reasoning Memory:** Automatically injects previous thoughts back into the conversation history using `<think>` tags, ensuring the model remembers its logical steps across multiple turns.
 * **Rich Media Handling:**
-  * **Images:** Upload or paste screenshots directly.
+  * **Images:** Upload or paste screenshots directly. Preserves multi-line text and prompt formatting perfectly in the chat history.
   * **Video:** Native video parsing and frame sampling support.
 * **Smart EXIF & Location Extraction:** Automatically extracts EXIF data, XMP metadata, and IPTC tags from uploaded images.
 * **Reverse Geocoding:** Converts GPS coordinates found in images into human-readable addresses using Nominatim.
 * **Dynamic Variable Injection:** Automatically maps extracted locations and timestamps to variables (e.g., {geo_1}, {time_1}) that you can use dynamically in your text prompts.
-* **Granular Parameter Control:** Adjust Temperature, Top P, Max Tokens, Seeds, and Video Sampling Frames directly from the sidebar.
-* **Transparent Execution:** Inspect exact JSON payloads, token usage, and execution times for every turn.
+* **Granular Parameter Control:** Adjust Temperature, Top P, Max Tokens, Seeds, Video Sampling Frames, and Thinking Toggles dynamically from the sidebar based on what the active model supports.
+* **Transparent Execution:** Inspect exact JSON payloads, raw chain-of-thought outputs, token usage, and execution times for every turn.
 
 ## 🛠️ Prerequisites
 
@@ -49,11 +51,11 @@ streamlit run webapp.py
 
 ## 🧩 How to Use the Builder
 
-1. **Select a Model:** Use the sidebar to choose your target LLM.
+1. **Select a Model:** Use the sidebar to choose your target LLM. If the model supports it, a "🧠 Enable Thinking" toggle will dynamically appear in the parameters menu.
 2. **Add Blocks:** Use the bottom toolbar to add Text, Image, or Video blocks.
 3. **Upload Media:** Drag and drop an image or paste from your clipboard. The app will immediately attempt to read its EXIF data.
 4. **Use Variables:** If an image has GPS/Time data, the app will display variables like {geo_1} and {time_1}. Write your text prompt like this: *"What is the architectural style of the building in this image? It was taken at {geo_1}."*
-5. **Send:** Click **Assemble & Send to LLM** to process the payload.
+5. **Send:** Click **Assemble & Send to LLM** to process the payload. Once the model replies, you can expand the "🧠 View Model Thinking" widget to see its internal logic.
 
 ## ⚠️ Notes on Geocoding Rate Limits
 This app uses OpenStreetMap's Nominatim service for reverse geocoding. To comply with their usage policy, the app enforces a strict 1-second pause between requests. Do not upload large batches of GPS-tagged images at once if you are in a rush.

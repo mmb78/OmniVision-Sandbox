@@ -230,9 +230,23 @@ async def send_to_llm(profile, full_messages_array, override_params):
         response = await client.chat.completions.create(**api_args)
         elapsed_time = time.time() - start_time
         
+        message = response.choices[0].message
+        
+        # 1. Check for standard OpenAI reasoning field
+        reasoning = getattr(message, "reasoning_content", None)
+        
+        # 2. Check for alternative reasoning attribute
+        if not reasoning:
+            reasoning = getattr(message, "reasoning", None)
+            
+        # 3. Check if the openai library stashed it in 'model_extra' (this is what is happening to you)
+        if not reasoning and hasattr(message, "model_extra") and message.model_extra:
+            reasoning = message.model_extra.get("reasoning", None)
+        
         return {
             "success": True,
             "text": response.choices[0].message.content,
+            "reasoning": reasoning,
             "stats": {
                 "Prompt Tokens": response.usage.prompt_tokens if hasattr(response, 'usage') else 0,
                 "Completion Tokens": response.usage.completion_tokens if hasattr(response, 'usage') else 0,
@@ -303,6 +317,22 @@ ui_top_p = st.sidebar.number_input("Top P", min_value=0.0, max_value=1.0, value=
 ui_max_tokens = st.sidebar.number_input("Max Tokens", min_value=1, max_value=128000, value=default_max_tokens)
 ui_seed = st.sidebar.number_input("Seed", min_value=0, value=default_seed)
 
+# --- ADVANCED MODEL SETTINGS ---
+supports_chat_template = (
+    "extra_body" in active_profile.get("api_params", {}) 
+    and "chat_template_kwargs" in active_profile["api_params"]["extra_body"]
+    and "enable_thinking" in active_profile["api_params"]["extra_body"]["chat_template_kwargs"]
+)
+
+if supports_chat_template:
+    default_thinking = active_profile["api_params"]["extra_body"]["chat_template_kwargs"].get("enable_thinking", False)
+    ui_enable_thinking = st.sidebar.checkbox(
+        "🧠 Enable Thinking", 
+        value=default_thinking, 
+        help="Instructs the model to \"think\" before it outputs the final answer."
+    )
+
+
 # --- VIDEO SETTINGS SECTION ---
 st.sidebar.header("3. Video Parameters (vLLM)")
 
@@ -347,14 +377,25 @@ if "seed" in active_profile["api_params"]:
 if token_key in active_profile["api_params"]:
     override_params[token_key] = ui_max_tokens
 
-# 5. ONLY inject extra_body if the model profile actually asks for it
+# 5. Build extra_body dynamically (Video + Thinking Overrides)
+has_extra_body_overrides = False
+active_extra_body = active_profile["api_params"].get("extra_body", {}).copy()
+
 if supports_mm_kwargs:
-    active_extra_body = active_profile["api_params"]["extra_body"].copy()
     active_extra_body["mm_processor_kwargs"] = {
         "fps": ui_fps,
         "max_frames": ui_max_frames,
         "do_sample_frames": True
     }
+    has_extra_body_overrides = True
+    
+if supports_chat_template:
+    # Copy the nested dictionary so we don't accidentally alter the global config
+    active_extra_body["chat_template_kwargs"] = active_extra_body.get("chat_template_kwargs", {}).copy()
+    active_extra_body["chat_template_kwargs"]["enable_thinking"] = ui_enable_thinking
+    has_extra_body_overrides = True
+    
+if has_extra_body_overrides:
     override_params["extra_body"] = active_extra_body
 
 # --- SYSTEM & EXIF PROMPTS SECTION ---
@@ -388,13 +429,18 @@ if len(st.session_state.chat_history) > 0:
         with st.chat_message("user"):
             for item in turn["user_payload"]:
                 if item["type"] == "text":
-                    st.write(item["text"])
+#                    st.write(item["text"]) # this removes new lines!
+                    st.text(item["text"])
                 elif item["type"] == "image_url":
                     st.image(item["image_url"]["url"], width=250)
                 elif item["type"] == "video_url":
                     st.video(item["video_url"]["url"])
                     
         with st.chat_message("assistant"):
+            if turn.get("reasoning"):
+                with st.expander("🧠 View Model Thinking"):
+                    st.write(turn["reasoning"])
+                    
             st.info(turn["assistant_text"])
             
             col_a, col_b = st.columns(2)
@@ -706,6 +752,7 @@ if len(st.session_state.blocks) > 0 and not st.session_state.confirm_clear:
             st.session_state.chat_history.append({
                 "user_payload": final_user_content,
                 "assistant_text": result["text"],
+                "reasoning": result.get("reasoning"),
                 "stats": result["stats"],
                 "raw": result["raw"],
                 "full_messages_sent": result["payload"],
